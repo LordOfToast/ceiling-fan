@@ -2,159 +2,187 @@
  * Program Name: CeilingFan.java
  * Purpose: An object class to simulate a ceiling fan and the various options associated with it.
  * Coder: Cameron Hughes
- * Date: July 26, 2022
+ * Date: July 27, 2022
  */
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
 
-public class CeilingFan {
-	int MAX_SPEED = 3;
+public class CeilingFan extends JFrame
+{
+	private static final long serialVersionUID = 1L;
 	
-	// Attributes
-	int speed = 0; // default to 0
-	String direction = "Clockwise"; // default to Clockwise
+	final int MAX_SPEED = 3;
 	
-	// Method for speeding up the fan
-	public void SpeedUp() {
-		if (speed >= MAX_SPEED) {
-			speed = 0;
-		}
-		else {
-			speed++;
-		}
-		
-		// Output new fan settings
-		try {
-			this.Print();
-		} catch (InterruptedException | IOException e) {
-			e.printStackTrace();
-		}
+	JButton speedBtn, directionBtn;
+	JLabel speedSetting, directionSetting;
+	JPanel centerPanel;
+	
+	BufferedImage fanImage;
+	Timer timer = new Timer(0, null);
+	double rotateDegree = 0.0d;
+	
+	// Default fan values
+	int speed = 0;
+	String direction = "Clockwise";
+	
+	// Method for rotating the image
+	// Credits for this math go to a mysterious stranger on Stack Overflow many years ago
+	public BufferedImage rotate(BufferedImage image, Double degrees)
+	{
+	    // Calculate the new size of the image based on the angle of rotation
+	    double radians = Math.toRadians(degrees);
+	    double sin = Math.abs(Math.sin(radians));
+	    double cos = Math.abs(Math.cos(radians));
+	    int newWidth = (int) Math.round(image.getWidth() * cos + image.getHeight() * sin);
+	    int newHeight = (int) Math.round(image.getWidth() * sin + image.getHeight() * cos);
+
+	    // Create a new image
+	    BufferedImage rotated = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+	    Graphics2D g2d = rotated.createGraphics();
+	    
+	    // Calculate the center point around which the image will be rotated
+	    int x = (newWidth - image.getWidth()) / 2;
+	    int y = (newHeight - image.getHeight()) / 2;
+	    
+	    // Transform the origin point around the center point
+	    AffineTransform at = new AffineTransform();
+	    at.setToRotation(radians, x + (image.getWidth() / 2), y + (image.getHeight() / 2));
+	    at.translate(x, y);
+	    g2d.setTransform(at);
+	    
+	    // Paint the original image
+	    g2d.drawImage(image, 0, 0, null);
+	    return rotated;
 	}
 	
-	// Method for changing the direction of the fan
-	public void ChangeDirection() {
-		if (direction == "Clockwise") {
-			direction = "Counter-Clockwise";
-		}
-		else if (direction == "Counter-Clockwise") {
-			direction = "Clockwise";
-		}
+	// Constructor
+	public CeilingFan()
+	{
+		super("Ceiling Fan Controls");
 		
-		// Output new fan settings
-		try {
-			this.Print();
-		} catch (InterruptedException | IOException e) {
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setSize(600,700);
+		this.setLocationRelativeTo(null);
+		
+		// Create topPanel to hold the fan
+		JPanel topPanel = new JPanel();
+		
+		JLabel signature = new JLabel("Programmed by Cameron Hughes");
+		topPanel.add(signature);
+		
+		this.add(topPanel, BorderLayout.NORTH);
+		
+		// Create centerPanel to hold fan attribute info
+		centerPanel = new JPanel();
+		centerPanel.setLayout(new GridBagLayout());
+		
+		try
+		{
+			fanImage = ImageIO.read(getClass().getResource("fan.png"));
+			centerPanel.add(new JLabel(new ImageIcon(fanImage)));
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
+		
+		this.add(centerPanel, BorderLayout.CENTER);
+				
+		// Add bottom panel to bottom
+		JPanel bottomPanel = new JPanel();
+		bottomPanel.setLayout(new GridLayout(2,2));
+		bottomPanel.setBackground(new Color (210,210,210) );
+		
+		speedSetting = new JLabel("Speed: " + speed);
+		directionSetting = new JLabel("Direction: " + direction);
+		speedSetting.setHorizontalAlignment(SwingConstants.CENTER);
+		directionSetting.setHorizontalAlignment(SwingConstants.CENTER);
+		bottomPanel.add(speedSetting);
+		bottomPanel.add(directionSetting);
+		
+		speedBtn = new JButton("Change Speed");
+		directionBtn = new JButton("Change Direction");
+		
+		bottomPanel.add(speedBtn, BorderLayout.CENTER);
+		bottomPanel.add(directionBtn, BorderLayout.SOUTH);
+		
+		this.add(bottomPanel, BorderLayout.SOUTH);
+		
+		// Register a listener for the buttons
+		ButtonListener listener = new ButtonListener();
+		speedBtn.addActionListener(listener);
+		directionBtn.addActionListener(listener);
+		
+		//this.pack();
+		this.setVisible(true);		
+	}//end constructor
 	
-	// Method for printing out the fan's info with an ascii animation
-	public void Print() throws InterruptedException, IOException {
-		Scanner input = new Scanner(System.in);
-		
-		// Calculate how fast the animation plays based off of current speed settings
-		int playSpeed = 500 - speed * 150;
-		if (playSpeed < 10) { // maximum speed allowed
-			playSpeed = 10;
-		}
-		int currentFrame = 0;
-		
-		while(System.in.available() == 0) {
-			
-			// Cycle through the frames in the correct order
-			if (direction == "Clockwise") {
-				currentFrame++;
-				if (currentFrame == frames.size()) {
-					currentFrame = 0;
-				}
+	// Inner Class
+	private class ButtonListener implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent ev)
+		{
+			// Change speed button pressed
+			if(ev.getSource().equals(speedBtn))
+			{
+				if (speed == MAX_SPEED)
+					speed = 0;
+				else
+					speed++;
 			}
-			else if (direction == "Counter-Clockwise") {
-				currentFrame--;
-				if (currentFrame == -1) {
-					currentFrame = frames.size() - 1;
-				}
+			// Change direction button pressed
+			else if(ev.getSource().equals(directionBtn) )
+			{
+				if (direction == "Clockwise")
+					direction = "Counter-Clockwise";
+				else if (direction == "Counter-Clockwise")
+					direction = "Clockwise";
 			}
 			
-			// Check if the fan is moving
-			if (speed == 0) {
-				System.out.println(frames.get(0));
-			}
-			else {
-				System.out.println(frames.get(currentFrame));
-			}
-			System.out.println("   Speed: " + speed + "       Direction: " + direction);
-			System.out.println("        Press ENTER to continue...\n\n\n\n");
+			// Update text fields
+			speedSetting.setText("Speed: " + speed);
+			directionSetting.setText("Direction: " + direction);
 			
-			Thread.sleep(playSpeed);
-		}
-		// Clean out the input
-		String userInput = input.nextLine();
-		
-	}// end print
+			// Spin the fan
+			timer.stop();
+			
+			if (direction == "Counter-Clockwise")
+			{
+				timer = new Timer(31 - speed * 10, new ActionListener() {
+		            public void actionPerformed(ActionEvent e) {
+		            	centerPanel.removeAll();
+		            	centerPanel.add(new JLabel(new ImageIcon(rotate(fanImage, rotateDegree))));
+		            	revalidate();
+		            	rotateDegree = rotateDegree - (speed + 2);
+		            }
+		        });
+			}
+			else if (direction == "Clockwise")
+			{
+				timer = new Timer(31 - speed * 10, new ActionListener() {
+		            public void actionPerformed(ActionEvent e) {
+		            	centerPanel.removeAll();
+		            	centerPanel.add(new JLabel(new ImageIcon(rotate(fanImage, rotateDegree))));
+		            	revalidate();
+		            	rotateDegree = rotateDegree + (speed + 2);
+		            }
+		        });
+			}
+			
+			if (speed > 0)
+				timer.start();
+			
+		}//end actionPerformed	
+	}//end inner class
 	
-	// Animation frames
-	List<String> frames = Arrays.asList(
-			"                                          \n" +
-			"                    ##                    \n" +
-			"                    ##                    \n" +
-			"                    ##                    \n" +
-			"      ######        ##        ######      \n" +
-			"           ####     ##     ####           \n" +
-			"               ###|0000|###               \n" +
-			"                 |000000|                 \n" +
-			"               ###|0000|###               \n" +
-			"           ####     ##     ####           \n" +
-			"      ######        ##        ######      \n" +
-			"                    ##                    \n" +
-			"                    ##                    \n" +
-			"                    ##                    \n" +
-			"                                          ",
-			"                                          \n" +
-			"                         ##               \n" +
-			"        ###              ##               \n" +
-			"          ####          ##                \n" +
-			"             ####      ##                 \n" +
-			"                ###   ##                  \n" +
-			"                  |0000|    #########     \n" +
-			"             ####|000000|####             \n" +
-			"     #########    |0000|                  \n" +
-			"                  ##   ###                \n" +
-			"                 ##      ####             \n" +
-			"                ##          ####          \n" +
-			"               ##              ###        \n" +
-			"               ##                         \n" +
-			"                                          ",
-			"                                          \n" +
-			"           ##                ##           \n" +
-			"            ##              ##            \n" +
-			"              ##          ##              \n" +
-			"               ##        ##               \n" +
-			"                 ##    ##                 \n" +
-			"                  |0000|                  \n" +
-			"     ############|000000|############     \n" +
-			"                  |0000|                  \n" +
-			"                 ##    ##                 \n" +
-			"               ##        ##               \n" +
-			"              ##          ##              \n" +
-			"            ##              ##            \n" +
-			"           ##                ##           \n" +
-			"                                          ",
-			"                                          \n" +
-			"               ##                         \n" +
-			"               ##              ###        \n" +
-			"                ##          ####          \n" +
-			"                 ##      ####             \n" +
-			"                  ##   ###                \n" +
-			"     #########    |0000|                  \n" +
-			"             ####|000000|####             \n" +
-			"                  |0000|    #########     \n" +
-			"                ###   ##                  \n" +
-			"             ####      ##                 \n" +
-			"          ####          ##                \n" +
-			"        ###              ##               \n" +
-			"                         ##               \n" +
-			"                                          ");
-}
+	public static void main(String[] args) throws IOException
+	{
+		new CeilingFan();
+	}//end main
+	
+}//end class
